@@ -1,0 +1,14 @@
+# Virtual Environment
+venv/
+env/
+
+# Data and Models (Too large for GitHub)
+data/
+models/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/

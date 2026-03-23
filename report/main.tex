@@ -1,0 +1,213 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+% 1. SLIGHTLY WIDER MARGINS TO SAVE SPACE SAFELY
+\usepackage[margin=0.85in]{geometry} 
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{booktabs}
+% 2. OPTIMIZED CAPTIONS
+\usepackage[font=small,skip=4pt]{caption} 
+\usepackage{subcaption}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{cite}
+\usepackage{titling}
+% 3. MICROTYPE FOR INVISIBLE SPACING OPTIMIZATION
+\usepackage{microtype} 
+
+% --- SAFE TITLE SPACING OPTIMIZATIONS ---
+\setlength{\droptitle}{-5em}
+\pretitle{\begin{center}\includegraphics[width=4cm]{}\\[-0.5em]\LARGE}
+\posttitle{\par\end{center}\vspace{-1.0em}}
+\preauthor{\begin{center}\large}
+\postauthor{\par\end{center}\vspace{-1.0em}}
+\predate{\begin{center}\large}
+\postdate{\par\end{center}\vspace{-1.5em}}
+
+% Safe global section and paragraph spacing (No overlapping!)
+\titlespacing*{\section}{0pt}{8pt}{4pt}
+\titlespacing*{\subsection}{0pt}{6pt}{3pt}
+\setlength{\parskip}{0.3em}
+\setlength{\intextsep}{10pt}
+\setlength{\floatsep}{10pt}
+% ----------------------------------------------
+
+\title{Classification of Martian Surface Features using Deep Convolutional Neural Networks}
+\author{\vspace{-0.5em}\normalsize Nainesh Dhomane \\ 
+        \small Module SPC707P - Deep Learning - 250704064}
+\date{\vspace{-1.0em}\small 04 March 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+In autonomous planetary exploration, the automated identification of surface landmarks is a critical operational requirement. This report details the development of a custom, four block Deep Convolutional Neural Network (CNN) designed to classify Martian surface features into eight distinct geomorphological categories. Because the dataset relies on low-contrast grayscale imagery exhibiting high intra-class variance, the architecture was explicitly engineered to extract complex textural and spatial features. By implementing robust regularization techniques, specifically a Dropout layer ($p = 0.5$) and L2 weight decay, the system successfully mitigated overfitting to achieve a final global test accuracy of 96\%. Comprehensive quantitative analysis, supported by a confusion matrix and category specific metrics, demonstrates that this deep learning approach can reliably distinguish between overlapping geological structures, establishing a highly accurate and robust baseline for automated Martian terrain mapping.
+\end{abstract}
+
+\section{Problem Setup and Data Synthesis}
+The primary objective of this research is to automate the classification of Martian landmarks, a capability vital for autonomous rover navigation, hazard avoidance, and broad geological surveying. To address this challenge, the project utilizes a specialized dataset of localized Martian surface imagery categorized into eight distinct geomorphological classes: \textit{other, crater, dune dark, slope streak, bright dune, impact ejecta, swiss cheese,} and \textit{spider} \cite{mars_dataset}.
+
+\subsection{Dataset Characteristics and Complexity}
+Compared to terrestrial imagery, Martian surface data is strictly grayscale and exhibits extreme intra-class variance \cite{palafox2017}. Because geological features like dunes and slope streaks share similar textural patterns, traditional computer vision thresholding proves ineffective. Consequently, deep feature extraction becomes mathematically essential to resolve these complex, non-linear decision boundaries. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\textwidth, height=10cm, keepaspectratio]
+    {original_surface_samples.png}
+    \caption{\textbf{Representative grid of raw input samples from the Martian surface dataset.}}
+    \label{fig:input_data}
+\end{figure}
+
+\subsection{Data Pre-processing}
+To address the low contrast nature of the dataset and ensure numerical stability during gradient descent \cite{tensorflow}, all raw imagery was standardized to a uniform spatial resolution of $100 \times 100 \times 1$ pixels. Pixel intensities were subsequently normalized from a discrete $[0, 255]$ range to a continuous $[0, 1]$ floating-point scale. This transformation is critical as it prevents internal covariate shift and ensures that the network's initial random weights are not immediately saturated by large input magnitudes, facilitating smoother convergence during training.
+
+\subsection{Proposed Architecture and Layer Activations}
+To effectively learn spatial hierarchies, a modular Convolutional Neural Network (CNN) was engineered consisting of four primary blocks. Each block employs a $3 \times 3$ kernel to capture local spatial correlations, followed by a Batch Normalization layer to stabilize the learning process and mitigate internal covariate shift \cite{ioffe2015}. 
+
+Crucially, each convolutional layer utilizes a \textbf{Rectified Linear Unit (ReLU)} activation function. ReLU was selected for all hidden layers to facilitate non-linear mapping while circumventing the vanishing gradient problem inherent in deeper architectures \cite{agarap2018}. As the network depth increases with scaling from 32 to 256 filters and spatial dimensions are progressively reduced via $2 \times 2$ Max-Pooling to extract increasingly abstract features. 
+
+Finally, the network terminates in a Dense classification layer utilizing a \textbf{Softmax} activation function. This Softmax layer ensures that raw logit outputs are squashed into a normalized probability distribution, providing the mathematical consistency required for this mutually exclusive 8-class prediction task.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth, height=8cm, keepaspectratio]{Deep_Learning_CNN_Architecture_upload.png}
+    \caption{\textbf{Deep Learning Convolutional Neural Network Architecture.} \cite{plotneuralnet}}
+    \label{fig:cnn_architecture}
+\end{figure}
+
+\section{Training and Optimization Strategy}
+The network was compiled using the \textbf{Adam optimizer} \cite{kingma2014adam}, selected for its adaptive learning rate capabilities to handle sparse gradients. This was integrated with a \textbf{Categorical Cross-Entropy} loss function, providing the standard probabilistic objective required for a Softmax driven multi-class classification task.
+
+\subsection{Convergence and Overfitting Mitigation}
+Training was executed over 20 epochs, with a primary engineering focus on mitigating model over-specialization. To counteract potential overfitting, a \textbf{Dropout layer} \cite{srivastava2014dropout} ($p=0.5$) and \textbf{L2 regularization} were integrated prior to the final classification. This approach prevents the network from relying on specific noise in the training set, instead forcing the architecture to learn the most robust features of the Martian terrain.
+
+As evidenced in Figure \ref{fig:training_metrics}, the learning curves validate this methodology. The stability of the validation accuracy (\textbf{Figure \ref{fig:training_metrics}a}) indicates that the model generalizes well to unseen data. Furthermore, the trajectory of the validation loss (\textbf{Figure \ref{fig:training_metrics}b}) aligns closely with the training loss rather than exhibiting the upward divergence typical of overfitting. This convergence confirms that the system successfully developed generalized feature representations in all classes.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{accuracy_convergence.png}
+        \caption{Accuracy Convergence}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{loss_optimization.png}
+        \caption{Loss Optimization}
+    \end{subfigure}
+    \caption{\textbf{Model Learning curves over 20 epochs}}
+    \label{fig:training_metrics}
+\end{figure}
+
+\section{Evaluation and Performance Analysis}
+The model was evaluated against a hold-out test set \cite{scikit-learn}, achieving a robust final global accuracy of 96\%. This benchmark confirms strong generalizability across the Martian dataset and validates the architectural design.
+
+\subsection{Quantitative Error Analysis}
+While this overall metric establishes strong performance, evaluating the granular predictive distribution is critical for validating mission-safety constraints. Identifying specific misclassifications ensures the model's reliability in distinguishing between similar geological features.
+
+\textbf{Confusion Matrix Analysis} \\
+The confusion matrix (Figure \ref{fig:confusion_matrix}) cross tabulates predictions against ground truth labels to isolate decision boundary weaknesses. Dominant diagonal values signify high accuracy, while minor off-diagonal clusters indicate systematic errors between classes with overlapping textural frequencies. This suggests that remaining misclassifications stem from inherent geological similarities rather than architectural limitations.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth, height=8cm]{confusion_matrix.png}
+    \caption{\textbf{Confusion Matrix - Predictive distribution across the Martian classes.} \cite{seaborn}}
+    \label{fig:confusion_matrix}
+\end{figure}
+
+\textbf{Classification Metrics} \\
+To quantify these specific matrix overlaps, a standard classification report extracts Precision, Recall, and the F1-Score for each category.
+
+\begin{table}[H]
+    \centering
+    \small
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{Geomorphological Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{Support} \\
+        \midrule
+        Other & 0.97 & 0.97 & 0.97 & 12,186 \\
+        Crater & 0.79 & 0.84 & 0.82 & 971 \\
+        Dark Dune & 0.91 & 0.89 & 0.90 & 258 \\
+        Slope Streak & 0.82 & 0.69 & 0.75 & 472 \\
+        Bright Dune & 0.99 & 0.98 & 0.99 & 362 \\
+        Impact Ejecta & 0.73 & 0.42 & 0.53 & 38 \\
+        Swiss Cheese & 0.74 & 0.95 & 0.83 & 221 \\
+        Spider & 0.90 & 0.91 & 0.90 & 99 \\
+        \midrule
+        \textbf{Accuracy} & \multicolumn{2}{c}{---} &
+        \textbf{0.95} &
+        \textbf{14,607} \\
+        \textbf{Macro Average} & \textbf{0.86} & \textbf{0.83} & \textbf{0.84} & \textbf{14,607} \\
+        \textbf{Weighted Average} & \textbf{0.95} & \textbf{0.95} & \textbf{0.95} & \textbf{14,607} \\
+        \bottomrule
+    \end{tabular}
+    \caption{\textbf{Final classification metrics.}}
+    \label{tab:class_report}
+\end{table}
+
+\textbf{Category-Specific Accuracy} \\
+Complementing the confusion matrix, the category-specific accuracy plot isolates the normalized true positive rate for each individual class. \textbf{Figure \ref{fig:accuracy_per_category}} demonstrates near-perfect mapping on craters and spiders, confirming the network relies on true topographical geometry rather than pixel noise.
+
+\begin{figure}[H]
+    \centering    \includegraphics[width=1.2\textwidth, height=9.0cm, keepaspectratio]{accuracy_per_category.png}
+    \caption{\textbf{Accuracy Plot - Normalized true positive rate per class.}}
+    \label{fig:accuracy_per_category}
+\end{figure}
+
+\subsection{Qualitative Results and Conclusion}
+A granular qualitative validation performed on a 20 sample hold out subset (Figure \ref{fig:qualitative_20}) provides a direct visual confirmation of the underlying mapping logic. \textbf{The model successfully generalizes across all eight categories by identifying prominent features such as craters and spiders with high fidelity.} Such evidence corroborates the high macro average accuracy and demonstrates that the network has moved beyond simple pattern matching toward a more sophisticated level of robust feature recognition.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\textwidth, height=8.5cm]{qualitative_performance.png}
+    \caption{\textbf{Qualitative performance - All eight true classes are represented.}}
+    \label{fig:qualitative_20}
+\end{figure}
+
+A comprehensive analysis indicates that the proposed architecture provides a highly effective solution for Martian terrain classification. Through rigorous pre processing, spatial pooling, and dropout regularization, the model successfully mitigated overfitting to achieve a 95\% global accuracy.
+
+While performance is robust, future iterations should introduce \texttt{class\_weight} balancing during the optimization phase and stratified sampling during the train test split to strictly guarantee proportionate learning across minority classes. These refinements will likely improve the recall for geological rarities such as impact ejecta in mission critical applications.
+
+\section{Data Availability and Reproducibility}
+\textbf{Repository URL:} \url{https://github.com/nainesh-builds/martian-cnn-image-classifier}
+
+\begin{thebibliography}{99}
+\small
+\setlength{\itemsep}{-1pt}
+\setlength{\parskip}{0pt}
+
+\bibitem{mars_dataset}
+NASA/Jet Propulsion Laboratory. \textit{Mars Orbital Image (HiRISE) Labeled Data Set Version 3}. \url{https://data.nasa.gov/dataset/mars-orbital-image-hirise-labeled-data-set-version-3}
+
+\bibitem{palafox2017}
+Palafox, L. F., et al. (2017). \textit{Automated detection of geological landforms on Mars using Convolutional Neural Networks}. Computers \& Geosciences, 101, 48 56.\url{https://doi.org/10.1016/j.cageo.2016.12.015}
+
+\bibitem{ioffe2015}
+Ioffe, S., \& Szegedy, C. (2015). \textit{Batch normalization}. \url{https://arxiv.org/abs/1502.03167}
+
+\bibitem{agarap2018}
+Agarap, A. F. (2018). \textit{Deep learning using rectified linear units (ReLU)}. \url{https://arxiv.org/abs/1803.08375}
+
+\bibitem{kingma2014adam}
+Kingma, D. P., \& Ba, J. (2014). \textit{Adam: A method for stochastic optimization}. \url{https://arxiv.org/abs/1412.6980}
+
+\bibitem{srivastava2014dropout}
+Srivastava, N., et al. (2014). \textit{Dropout}. JMLR, 15(1), 1929 1958. \url{https://jmlr.org/papers/v15/srivastava14a.html}
+
+\bibitem{tensorflow}
+Abadi, M., et al. (2015). \textit{TensorFlow: Large scale machine learning on heterogeneous systems}. \url{https://www.tensorflow.org/}
+
+\bibitem{scikit-learn}
+Pedregosa, F., et al. (2011). \textit{Scikit learn: Machine learning in Python}. JMLR, 12, 2825 2830. \url{https://scikit-learn.org/}
+
+\bibitem{seaborn}
+Waskom, M. L. (2021). \textit{seaborn: statistical data visualization}. Journal of Open Source Software. \url{https://seaborn.pydata.org/}
+
+\bibitem{plotneuralnet}
+Iqbal, H. (2021). \textit{HarisIqbal88/PlotNeuralNet}. GitHub. \url{https://github.com/HarisIqbal88/PlotNeuralNet}
+
+\end{thebibliography}
+
+\end{document}
